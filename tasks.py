@@ -381,159 +381,313 @@ TASKS: Dict[str, List[Dict[str, Any]]] = {
     # ════════════════════════════════════════════════════════════════
     "hard": [
 
-        # H1 — omission error: critical qualifier removed
+        # H1 — Ambiguity Trap (UN Status)
+        # Difficulty: Confuses "participation" (observer status) with "membership".
+        # Reasoning: Requires distinguishing categorical legal status from functional roles.
         {
             "reference_document": (
-                "The drug is approved for use in patients aged 18 and above only. "
-                "Clinical trials involving 3,200 participants showed a 68 percent improvement rate. "
-                "The drug must be taken with food to avoid gastrointestinal side effects. "
-                "It should not be combined with blood thinners. "
-                "The drug received FDA approval in February 2021 after three years of trials."
+                "The Republic of China (Taiwan) is not a member of the United Nations, having been replaced by the "
+                "People's Republic of China in 1971 through General Assembly Resolution 2758. "
+                "Since then, Taiwan has participated in certain international organizations (like the WHO) as an observer, "
+                "but it lacks the status of a sovereign member state in the UN body."
             ),
             "llm_response": (
-                "The drug is approved for general use. "
-                "Clinical trials involving 3,200 participants showed a 68 percent improvement rate. "
-                "The drug must be taken with food to avoid gastrointestinal side effects. "
-                "It should not be combined with blood thinners. "
-                "The drug received FDA approval in February 2021 after three years of trials."
+                "Taiwan remains a functional member of the UN under a specialized status, though it lacks voting "
+                "rights in the General Assembly. Following Resolution 2758, the UN created a unique observer-member "
+                "category for independent territories like Taiwan."
             ),
             "ground_truth_has_hallucination": True,
-            "ground_truth_hallucinated_phrases": ["approved for general use"],
-            "ground_truth_corrections": ["approved for use in patients aged 18 and above only"],
-            "hint": "The age restriction from the reference has been silently removed."
+            "ground_truth_hallucinated_phrases": [
+                "functional member of the UN under a specialized status",
+                "unique observer-member category"
+            ],
+            "ground_truth_corrections": [
+                "is not a member of the United Nations",
+                "lacks the status of a sovereign member state"
+            ],
+            "hint": "Check the specific legal status of 'membership' vs 'participation'."
         },
 
-        # H2 — near-correct numeric drift: subtle digit change
+        # H2 — Partial Truth (Medicine MOA)
+        # Difficulty: Model mixes common medication categories (stimulants vs reducers).
+        # Reasoning: Requires precise biochemical knowledge of drug mechanisms.
         {
             "reference_document": (
-                "The company reported total revenue of 4.2 billion dollars in the fiscal year ending March 2023. "
-                "Revenue grew by 12 percent compared to the previous year. "
-                "Operating expenses increased to 2.8 billion dollars over the same period. "
-                "Net profit margin stood at 18 percent, up from 15 percent the prior year. "
-                "The Asia-Pacific region contributed 38 percent of total revenue."
+                "Metformin is the first-line medication for type 2 diabetes. It works primarily by suppressing "
+                "glucose production in the liver (gluconeogenesis) and increasing the insulin sensitivity of body tissues. "
+                "Unlike sulfonylureas, Metformin does not stimulate insulin secretion from the pancreas."
             ),
             "llm_response": (
-                "The company reported total revenue of 4.2 billion dollars in the fiscal year ending March 2023. "
-                "Revenue grew by 12 percent compared to the previous year. "
-                "Operating expenses increased to 2.8 billion dollars over the same period. "
-                "Net profit margin stood at 18 percent, up from 15 percent the prior year. "
-                "The Asia-Pacific region contributed 83 percent of total revenue."
+                "As the primary treatment for type 2 diabetes, Metformin acts by stimulating the beta cells in the "
+                "pancreas to release more insulin. This increased insulin sensitivity effectively lowers blood glucose levels."
             ),
             "ground_truth_has_hallucination": True,
-            "ground_truth_hallucinated_phrases": ["contributed 83 percent of total revenue"],
-            "ground_truth_corrections": ["contributed 38 percent of total revenue"],
-            "hint": "Most numbers are correct. One figure has had its digits reversed — look carefully at the regional contribution."
+            "ground_truth_hallucinated_phrases": ["stimulating the beta cells in the pancreas to release more insulin"],
+            "ground_truth_corrections": ["suppressing glucose production in the liver"],
+            "hint": "Compare the organ affected: liver vs pancreas."
         },
 
-        # H3 — buried error: wrong figure surrounded by correct facts
+        # H3 — Multi-hop Reasoning (Distance/Units)
+        # Difficulty: Confuses 'm' (meters) with 'km' (kilometers) over large 7-decade leap.
+        # Reasoning: Unit conversion error triggered by large numeric comparisons.
         {
             "reference_document": (
-                "The International Space Station orbits the Earth at an altitude of approximately 408 kilometres. "
-                "It travels at a speed of about 7.66 kilometres per second. "
-                "The station completes 15.5 orbits per day. "
-                "It was first launched in 1998 and has been continuously inhabited since November 2000. "
-                "The ISS is a collaboration between five space agencies: NASA, Roscosmos, ESA, JAXA, and CSA."
+                "The Wright brothers' first flight in 1903 covered 36 meters (120 feet) in 12 seconds. "
+                "By 1969, the Apollo 11 mission completed a journey of roughly 384,400 kilometres to reach the Moon. "
+                "The speed of travel increased from 10 km/h to over 39,000 km/h in just 66 years."
             ),
             "llm_response": (
-                "The International Space Station orbits the Earth at an altitude of approximately 408 kilometres. "
-                "It travels at a speed of about 7.66 kilometres per second. "
-                "The station completes 15.5 orbits per day. "
-                "It was first launched in 1998 and has been continuously inhabited since November 2002. "
-                "The ISS is a collaboration between five space agencies: NASA, Roscosmos, ESA, JAXA, and CSA."
+                "In less than 70 years, humans advanced from a 36-meter flight to a lunar mission covering 384,400 meters. "
+                "This represent one of the most rapid technological accelerations in human history."
             ),
             "ground_truth_has_hallucination": True,
-            "ground_truth_hallucinated_phrases": ["continuously inhabited since November 2002"],
-            "ground_truth_corrections": ["continuously inhabited since November 2000"],
-            "hint": "Four of the five facts are correct. One year has been changed by 2 — find the specific date that differs."
+            "ground_truth_hallucinated_phrases": ["covering 384,400 meters"],
+            "ground_truth_corrections": ["covering 384,400 kilometres"],
+            "hint": "Double check the units of the lunar distance: meters vs kilometres."
         },
 
-        # H4 — omission changes meaning: unit qualifier removed
+        # H4 — Negation Trap (Liability)
+        # Difficulty: Fails to process "unless" + "not liable" conditional logic.
+        # Reasoning: Linguistic negation reversal.
         {
             "reference_document": (
-                "The marathon race covers a distance of exactly 42.195 kilometres. "
-                "The world record for the men's marathon is 2 hours, 0 minutes, and 35 seconds, "
-                "set by Kelvin Kiptum of Kenya in October 2023. "
-                "The marathon has been part of the modern Olympics since the first Games in Athens in 1896. "
-                "Runners typically burn between 2,500 and 3,000 calories during a marathon."
+                "The software license agreement states that the developer is not liable for indirect damages "
+                "unless such damages are caused by gross negligence or willful misconduct. "
+                "In standard cases of simple negligence, the developer's liability is capped at the purchase price."
             ),
             "llm_response": (
-                "The marathon race covers a distance of exactly 42.195 kilometres. "
-                "The world record for the men's marathon is 2 hours, 0 minutes, and 35 seconds, "
-                "set by Kelvin Kiptum in October 2023. "
-                "The marathon has been part of the modern Olympics since the first Games in Athens in 1896. "
-                "Runners typically burn between 2,500 and 3,000 calories during a marathon."
+                "According to the agreement, the developer remains liable for indirect damages even if "
+                "gross negligence cannot be proven. Simple negligence is enough to trigger full liability."
             ),
             "ground_truth_has_hallucination": True,
-            "ground_truth_hallucinated_phrases": ["set by Kelvin Kiptum in October 2023"],
-            "ground_truth_corrections": ["set by Kelvin Kiptum of Kenya in October 2023"],
-            "hint": "One specific detail about the record holder has been silently removed from the response."
+            "ground_truth_hallucinated_phrases": [
+                "liable for indirect damages even if gross negligence cannot be proven",
+                "Simple negligence is enough to trigger full liability"
+            ],
+            "ground_truth_corrections": [
+                "not liable for indirect damages unless gross negligence is proven",
+                "simple negligence is capped at the purchase price"
+            ],
+            "hint": "Look at the condition for liability: simple vs gross negligence."
         },
 
-        # H5 — false alarm trap: response is shorter but factually correct
+        # H5 — Entity-Role Confusion (M&A)
+        # Difficulty: Swaps acquirer and target in a famous corporate deal.
+        # Reasoning: Subject/Object reversal.
         {
             "reference_document": (
-                "The Nile River is often cited as the longest river in the world, "
-                "stretching approximately 6,650 kilometres. "
-                "It flows northward through northeastern Africa and empties into the Mediterranean Sea. "
-                "The river has two main tributaries: the White Nile and the Blue Nile. "
-                "The Blue Nile originates from Lake Tana in Ethiopia."
+                "In June 2017, Amazon announced its intention to acquire the grocery chain Whole Foods for $13.7 billion. "
+                "The acquisition marked Amazon's largest entry into physical retail stores. "
+                "The deal was finalized in August 2017."
             ),
             "llm_response": (
-                "The Nile River is often cited as the longest river in the world, "
-                "stretching approximately 6,650 kilometres. "
-                "It flows northward through northeastern Africa and empties into the Mediterranean Sea."
+                "Whole Foods made a massive digital expansion in 2017 by acquiring Amazon for $13.7 billion, "
+                "integrating its organic grocery supply chain into Amazon's global delivery network."
+            ),
+            "ground_truth_has_hallucination": True,
+            "ground_truth_hallucinated_phrases": ["Whole Foods ... acquiring Amazon"],
+            "ground_truth_corrections": ["Amazon ... acquire the grocery chain Whole Foods"],
+            "hint": "Who bought whom?"
+        },
+
+        # H6 — Truth-that-sounds-false (Venus Rotation)
+        # Difficulty: Adversarial Clean. The fact is counter-intuitive and sounds like a typical hallucination.
+        # Reasoning: Tempts the model to 'correct' a true fact into a false one.
+        {
+            "reference_document": (
+                "Venus has an unusual rotation; it takes 243 Earth days to complete one rotation on its axis. "
+                "However, its orbital period is only 225 Earth days. "
+                "Therefore, a day on Venus (one full rotation) is actually longer than a year on Venus (one full orbit)."
+            ),
+            "llm_response": (
+                "Venus is unique because its day (243 Earth days) is actually longer than its year (225 Earth days). "
+                "This means the planet completes an orbit around the Sun faster than it rotates once on its axis."
             ),
             "ground_truth_has_hallucination": False,
             "ground_truth_hallucinated_phrases": [],
             "ground_truth_corrections": [],
-            "hint": "The response only omits sentences — it does not contradict any fact in the reference."
+            "hint": "Verify the numbers 243 and 225 carefully."
         },
 
-        # H6 — subtle numeric error: wrong percentage hidden among correct stats
+        # H7 — False-but-plausible (Magna Carta)
+        # Difficulty: Uses a plausible-sounding royal term (Divine Right) that is historically opposite to the treaty's intent.
+        # Reasoning: Conceptual hallucination.
         {
             "reference_document": (
-                "The study enrolled 1,500 participants across four hospital sites. "
-                "After six months, 72 percent of participants in the treatment group showed significant improvement. "
-                "In the control group, only 31 percent showed similar improvement. "
-                "The dropout rate across both groups was 8 percent. "
-                "Adverse events were reported in 4 percent of treatment group participants."
+                "The Magna Carta, issued in June 1215 at Runnymede, aimed to limit the power of King John. "
+                "It established the principle that everyone, including the king, was subject to the law. "
+                "It primarily addressed the grievances of rebellious barons."
             ),
             "llm_response": (
-                "The study enrolled 1,500 participants across four hospital sites. "
-                "After six months, 72 percent of participants in the treatment group showed significant improvement. "
-                "In the control group, only 13 percent showed similar improvement. "
-                "The dropout rate across both groups was 8 percent. "
-                "Adverse events were reported in 4 percent of treatment group participants."
+                "The 1215 Magna Carta was signed by King John to formalize the Divine Right of Kings, "
+                "ensuring that the monarchy's absolute power was recognized by the Church and the barons."
             ),
             "ground_truth_has_hallucination": True,
-            "ground_truth_hallucinated_phrases": ["only 13 percent showed similar improvement"],
-            "ground_truth_corrections": ["only 31 percent showed similar improvement"],
-            "hint": "Four out of five statistics are correct. One percentage has had its digits reversed — read every number carefully."
+            "ground_truth_hallucinated_phrases": ["formalize the Divine Right of Kings", "monarchy's absolute power"],
+            "ground_truth_corrections": ["limit the power of King John", "king was subject to the law"],
+            "hint": "Did the Magna Carta increase or decrease the King's power?"
         },
 
-        # H7 — CLEAN (no hallucination): long response, all facts correct
+        # H8 — No-hallucination Adversarial (Triple Witching)
+        # Difficulty: Adversarial Clean. Uses synonymous phrasing (Final month of each quarter) to trigger false detection.
+        # Reasoning: Tests linguistic flexibility vs rigid fact-checking.
         {
             "reference_document": (
-                "Photosynthesis is the process by which plants convert sunlight, carbon dioxide, and water "
-                "into glucose and oxygen. "
-                "The process takes place primarily in the chloroplasts of plant cells. "
-                "Chlorophyll, the green pigment in plants, absorbs light energy to drive the reaction. "
-                "The overall chemical equation is: 6CO2 + 6H2O + light energy → C6H12O6 + 6O2. "
-                "Photosynthesis is the foundation of most food chains on Earth."
+                "Triple Witching occurs on the third Friday of March, June, September, and December. "
+                "This is when stock options, stock index futures, and stock index options all expire on the same day. "
+                "This often leads to increased trading volume and volatility."
             ),
             "llm_response": (
-                "Photosynthesis is the process by which plants convert sunlight, carbon dioxide, and water "
-                "into glucose and oxygen. "
-                "The process takes place primarily in the chloroplasts of plant cells. "
-                "Chlorophyll, the green pigment in plants, absorbs light energy to drive the reaction."
+                "Triple Witching happens on the third Friday of the final month of each quarter. "
+                "It involves the simultaneous expiration of stock options and various index-related derivatives."
             ),
             "ground_truth_has_hallucination": False,
             "ground_truth_hallucinated_phrases": [],
             "ground_truth_corrections": [],
-            "hint": "Every statement in the response is directly supported by the reference. Shorter does not mean wrong."
+            "hint": "Check if 'final month of each quarter' matches 'March, June, September, and December'."
         },
+
+        # H9 — Multi-error (European Union)
+        # Difficulty: Outdated training data (Brexit) + Multiple numeric counts.
+        # Reasoning: Tests ability to catch multiple, distinct hallucinations in a short text.
+        {
+            "reference_document": (
+                "Following the withdrawal of the United Kingdom, the European Union has 27 member states. "
+                "The Eurozone consists of 20 countries that use the Euro as their currency. "
+                "Croatia was the most recent country to join the Eurozone in January 2023."
+            ),
+            "llm_response": (
+                "The European Union currently consists of 28 member states, while the Eurozone "
+                "includes 19 countries that have adopted the Euro as their primary currency."
+            ),
+            "ground_truth_has_hallucination": True,
+            "ground_truth_hallucinated_phrases": ["28 member states", "19 countries"],
+            "ground_truth_corrections": ["27 member states", "20 countries"],
+            "hint": "Look for two separate errors in this response."
+        },
+
+        # H10 — Temporal Confusion (Voyager 1)
+        # Difficulty: Confuses the Heliopause (Interstellar space boundary) with the Oort Cloud (Solar System boundary).
+        # Reasoning: Spatial/Temporal logic boundary error.
+        {
+            "reference_document": (
+                "Voyager 1, launched in 1977, officially entered interstellar space in August 2012. "
+                "While it has left the heliosphere, it will not reach the inner edge of the Oort Cloud for "
+                "another 300 years. The Oort Cloud is considered the final boundary of the Solar System."
+            ),
+            "llm_response": (
+                "Voyager 1 was launched in 1977 and reached the heliopause in 2012, though it didn't "
+                "officially enter interstellar space until it reached the Oort Cloud in 2018."
+            ),
+            "ground_truth_has_hallucination": True,
+            "ground_truth_hallucinated_phrases": ["didn't officially enter interstellar space until it reached the Oort Cloud in 2018"],
+            "ground_truth_corrections": ["entered interstellar space in August 2012"],
+            "hint": "Distinguish between 'Interstellar Space' and the 'Oort Cloud'."
+        },
+
+        # H11 — Ambiguity Trap (Marie Curie)
+        # Difficulty: Adversarial Clean. Model may hallucinate a 'conflict' with Linus Pauling.
+        # Reasoning: Requires verifying specific constraints ("Scientific fields").
+        {
+            "reference_document": (
+                "Marie Curie is the only person to win Nobel Prizes in two different scientific fields: "
+                "Physics (1903) and Chemistry (1911). Linus Pauling is the only person to win two "
+                "unshared Nobel Prizes, but one of his was for Peace, which is not a scientific field."
+            ),
+            "llm_response": (
+                "Marie Curie remains the only individual in history to be awarded Nobel Prizes in two "
+                "distinct scientific areas: Physics and Chemistry."
+            ),
+            "ground_truth_has_hallucination": False,
+            "ground_truth_hallucinated_phrases": [],
+            "ground_truth_corrections": [],
+            "hint": "Is Marie Curie indeed the only one in *scientific* fields?"
+        },
+
+        # H12 — Partial Truth (JWST)
+        # Difficulty: Subtle numeric swap in a highly technical description.
+        # Reasoning: Precision monitoring of hardware specs.
+        {
+            "reference_document": (
+                "The James Webb Space Telescope (JWST) is protected by a massive sunshield consisting of "
+                "five layers of Kapton. This sunshield allows the telescope to operate at temperatures "
+                "below 50 Kelvin (-223 degrees Celsius)."
+            ),
+            "llm_response": (
+                "To remain cool, the JWST utilizes a three-layer Kapton sunshield, which keeps the sensitive "
+                "infrared instruments at a stable operating temperature near absolute zero."
+            ),
+            "ground_truth_has_hallucination": True,
+            "ground_truth_hallucinated_phrases": ["three-layer Kapton sunshield"],
+            "ground_truth_corrections": ["five layers of Kapton"],
+            "hint": "Check the exact number of layers in the sunshield."
+        },
+
+        # H13 — Entity-Role Confusion (Nord Stream)
+        # Difficulty: Reverses exporter/importer and commodity type.
+        # Reasoning: Logic/Geopolitical flow reversal.
+        {
+            "reference_document": (
+                "The Nord Stream 2 pipeline was built to transport natural gas from Russia to Germany. "
+                "The project travels through the Baltic Sea and was intended to double the capacity "
+                "of the original Nord Stream 1 pipeline."
+            ),
+            "llm_response": (
+                "Nord Stream 2 was a German infrastructure project designed to export surplus natural gas "
+                "to Russia through a series of offshore pipelines in the Baltic Sea."
+            ),
+            "ground_truth_has_hallucination": True,
+            "ground_truth_hallucinated_phrases": ["German infrastructure project designed to export ... to Russia"],
+            "ground_truth_corrections": ["transport natural gas from Russia to Germany"],
+            "hint": "Follow the direction of the gas flow in the pipe."
+        },
+
+        # H14 — False-but-plausible (Antibiotics)
+        # Difficulty: Categorization error. Plausible-sounding antiviral designation for a famous medication.
+        # Reasoning: Lexical category swap.
+        {
+            "reference_document": (
+                "Penicillin, discovered by Alexander Fleming in 1928, is an antibiotic used to treat "
+                "bacterial infections. It works by interfering with the bacterium's ability to build its "
+                "cell wall, leading to the death of the pathogen."
+            ),
+            "llm_response": (
+                "Alexander Fleming's 1928 discovery, Penicillin, is a staple antiviral medication that "
+                "prevents viral replication by breaking down the protein coat of the virus."
+            ),
+            "ground_truth_has_hallucination": True,
+            "ground_truth_hallucinated_phrases": ["antiviral medication that prevents viral replication"],
+            "ground_truth_corrections": ["antibiotic used to treat bacterial infections"],
+            "hint": "Does Penicillin kill bacteria or viruses?"
+        },
+
+        # H15 — Temporal Confusion (The Macintosh)
+        # Difficulty: Multiple errors regarding hardware/software timelines.
+        # Reasoning: Requires mapping specific features to specific years and versions.
+        {
+            "reference_document": (
+                "Apple's Macintosh, released in 1984, was the first mass-market personal computer to "
+                "feature an integral graphical user interface and a mouse. System 7, released in 1991, "
+                "was a major software update that introduced multitasking."
+            ),
+            "llm_response": (
+                "Although released in 1984, the original Macintosh only featured a command-line interface. "
+                "The transition to a graphical user interface and a mouse didn't occur until System 7 in 1991."
+            ),
+            "ground_truth_has_hallucination": True,
+            "ground_truth_hallucinated_phrases": [
+                "original Macintosh only featured a command-line interface",
+                "didn't occur until System 7 in 1991"
+            ],
+            "ground_truth_corrections": [
+                "first mass-market personal computer to feature an integral graphical user interface",
+                "featured ... a mouse"
+            ],
+            "hint": "Did the 1984 Macintosh have a mouse and a GUI from the beginning?"
+        }
     ],
 }
+
 
 
 def get_task(task_id: str) -> List[Dict[str, Any]]:

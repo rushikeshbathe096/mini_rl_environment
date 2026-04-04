@@ -2,12 +2,20 @@
 import asyncio
 import os
 import json
+import time
+import csv
 from typing import List, Optional
 from openai import OpenAI
 from client import HallucinationEnvClient
 from models import HallucinationAction
 
 # ── Required env vars (exact names from competition) ─────────────────
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 API_KEY      = os.getenv("HF_TOKEN") or os.getenv("API_KEY")
 API_BASE_URL = os.getenv("API_BASE_URL") or "https://router.huggingface.co/v1"
 MODEL_NAME   = os.getenv("MODEL_NAME") or "Qwen/Qwen2.5-72B-Instruct"
@@ -114,28 +122,44 @@ def get_action(client: OpenAI, reference: str, response: str) -> HallucinationAc
         f"REFERENCE DOCUMENT:\n{reference}\n\n"
         f"LLM RESPONSE:\n{response}"
     )
-    try:
-        completion = client.chat.completions.create(
-            model=MODEL_NAME,
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user",   "content": user_content}
-            ],
-            temperature=0,
-            max_tokens=256,
-            seed=42,        # forces determinism
-            stream=False
-        )
-        raw = (completion.choices[0].message.content or "").strip()
-        return parse_llm_output(raw)
-    except Exception as exc:
-        print(f"[DEBUG] LLM call failed: {exc}", flush=True)
-        return HallucinationAction(
-            has_hallucination=False,
-            hallucinated_claim=None,
-            correct_fact=None,
-            confidence=0.5
-        )
+    
+    # Some providers (Gemini, certain HF models) reject 'seed'
+    extra_kwargs = {}
+    if not any(x in API_BASE_URL for x in ["generativelanguage.googleapis.com", "gemini"]):
+        extra_kwargs["seed"] = 42
+
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            completion = client.chat.completions.create(
+                model=MODEL_NAME,
+                messages=[
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user",   "content": user_content}
+                ],
+                temperature=0,
+                max_tokens=256,
+                stream=False,
+                timeout=45.0,   # increased for slow free-tier providers
+                **extra_kwargs
+            )
+            raw = (completion.choices[0].message.content or "").strip()
+            return parse_llm_output(raw)
+        except Exception as exc:
+            # Handle rate limiting (429) or temporary server errors (500, 503)
+            # Add exponential backoff
+            if attempt < max_retries - 1:
+                wait_time = (2 ** attempt) + 1
+                print(f"[DEBUG] LLM call failed (attempt {attempt+1}/{max_retries}): {exc}. Retrying in {wait_time}s...", flush=True)
+                time.sleep(wait_time)
+            else:
+                print(f"[DEBUG] LLM call failed after {max_retries} attempts: {exc}", flush=True)
+                return HallucinationAction(
+                    has_hallucination=False,
+                    hallucinated_claim=None,
+                    correct_fact=None,
+                    confidence=0.5
+                )
 
 
 # ── Task runner ───────────────────────────────────────────────────────
@@ -202,10 +226,17 @@ async def run_task(task_id: str, client: OpenAI) -> float:
 async def main() -> None:
     client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
 
+    # Rate-limit guard for free-tier providers (set REQUEST_DELAY=2 for Mistral, etc.)
+    request_delay = float(os.getenv("REQUEST_DELAY", "0"))
+
     results = {}
     for task_id in TASKS:
         score = await run_task(task_id, client)
         results[task_id] = score
+        if request_delay > 0:
+            time.sleep(request_delay)
+        if request_delay > 0:
+            time.sleep(request_delay)
 
     print("\n" + "=" * 45, flush=True)
     print("FINAL RESULTS", flush=True)
@@ -214,6 +245,25 @@ async def main() -> None:
         print(f"  {task_id:<10} {score:.4f}", flush=True)
     avg = sum(results.values()) / len(results)
     print(f"  {'average':<10} {avg:.4f}", flush=True)
+
+    # ── Benchmarking Log (CSV) ──────────────────────────────────────────
+    csv_file = "benchmark_results.csv"
+    file_exists = os.path.isfile(csv_file)
+    
+    with open(csv_file, mode='a', newline='') as f:
+        writer = csv.writer(f)
+        if not file_exists:
+            writer.writerow(["timestamp", "model", "easy", "medium", "hard", "average"])
+        
+        writer.writerow([
+            time.strftime("%Y-%m-%d %H:%M:%S"),
+            MODEL_NAME,
+            f"{results.get('easy', 0.0):.4f}",
+            f"{results.get('medium', 0.0):.4f}",
+            f"{results.get('hard', 0.0):.4f}",
+            f"{avg:.4f}"
+        ])
+    print(f"\n[INFO] Results saved to {csv_file}", flush=True)
 
 
 if __name__ == "__main__":

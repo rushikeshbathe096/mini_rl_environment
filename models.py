@@ -83,5 +83,6 @@ class HallucinationState(BaseModel):
 
     episode_score: float = 0.0
     steps_taken: int = 0
+    step_count: int = 0
 
     is_done: bool = False
