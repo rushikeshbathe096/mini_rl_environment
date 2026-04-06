@@ -1,24 +1,32 @@
 # client.py
-from typing import Any
-from openenv.core.env_client import EnvClient
-from openenv.core.client_types import StepResult
+import httpx
+from dataclasses import dataclass
+from typing import Optional
 from models import HallucinationAction, HallucinationObservation, HallucinationState
 
 
-class HallucinationEnvClient(EnvClient):
+@dataclass
+class StepResult:
+    observation: HallucinationObservation
+    reward: Optional[float]
+    done: bool
 
-    def _step_payload(self, action: HallucinationAction) -> dict:
-        """Convert action to dict for sending to server."""
-        return {
-            "has_hallucination": action.has_hallucination,
-            "hallucinated_claim": action.hallucinated_claim,
-            "correct_fact": action.correct_fact,
-            "confidence": action.confidence
-        }
 
-    def _parse_result(self, payload: dict) -> StepResult:
-        """Convert server response dict to StepResult with typed observation."""
-        obs_data = payload.get("observation", payload)
+class HallucinationEnvClient:
+    def __init__(self, base_url: str = "http://localhost:7860"):
+        self.base_url = base_url.rstrip("/")
+        self._client = None
+
+    async def __aenter__(self):
+        self._client = httpx.AsyncClient(timeout=60.0)
+        return self
+
+    async def __aexit__(self, *args):
+        if self._client:
+            await self._client.aclose()
+
+    def _parse_response(self, data: dict) -> StepResult:
+        obs_data = data.get("observation", data)
         obs = HallucinationObservation(
             done=obs_data.get("done", False),
             reward=obs_data.get("reward"),
@@ -35,18 +43,28 @@ class HallucinationEnvClient(EnvClient):
         )
         return StepResult(
             observation=obs,
-            reward=payload.get("reward", obs.reward),
-            done=payload.get("done", obs.done)
+            reward=data.get("reward", obs.reward),
+            done=data.get("done", obs.done)
         )
 
-    def _parse_state(self, payload: dict) -> HallucinationState:
-        """Convert server state dict to typed HallucinationState."""
-        return HallucinationState(
-            episode_id=payload.get("episode_id"),
-            task_id=payload.get("task_id", ""),
-            sample_index=payload.get("sample_index", 0),
-            total_samples=payload.get("total_samples", 0),
-            episode_score=payload.get("episode_score", 0.0),
-            steps_taken=payload.get("steps_taken", 0),
-            is_done=payload.get("is_done", False)
+    async def reset(self, task_id: str = "easy") -> StepResult:
+        resp = await self._client.post(
+            f"{self.base_url}/reset",
+            json={"task_id": task_id}
         )
+        resp.raise_for_status()
+        return self._parse_response(resp.json())
+
+    async def step(self, action: HallucinationAction) -> StepResult:
+        resp = await self._client.post(
+            f"{self.base_url}/step",
+            json={"action": action.model_dump()}
+        )
+        resp.raise_for_status()
+        return self._parse_response(resp.json())
+
+    async def state(self) -> HallucinationState:
+        resp = await self._client.get(f"{self.base_url}/state")
+        resp.raise_for_status()
+        data = resp.json()
+        return HallucinationState(**data)

@@ -1,20 +1,42 @@
-# server/app.py
 import os
 import sys
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from openenv.core.env_server import create_fastapi_app
-from server.environment import HallucinationEnvironment
-from models import HallucinationAction, HallucinationObservation
+from fastapi import FastAPI
+from pydantic import BaseModel
+from typing import Optional
+from environment import HallucinationEnvironment
+from models import HallucinationAction
 
-app = create_fastapi_app(
-    env=HallucinationEnvironment,          # class, not instance
-    action_cls=HallucinationAction,
-    observation_cls=HallucinationObservation,
-    max_concurrent_envs=16,
-)
+app = FastAPI()
+env = HallucinationEnvironment()
 
-if __name__ == "__main__":
+class ResetRequest(BaseModel):
+    task_id: Optional[str] = "easy"
+
+class StepRequest(BaseModel):
+    action: HallucinationAction
+
+@app.post("/reset")
+def reset(body: ResetRequest = ResetRequest()):
+    obs = env.reset(task_id=body.task_id)
+    return {"observation": obs.model_dump(), "reward": None, "done": False}
+
+@app.post("/step")
+def step(body: StepRequest):
+    obs = env.step(body.action)
+    return {"observation": obs.model_dump(), "reward": obs.reward, "done": obs.done}
+
+@app.get("/state")
+def state():
+    return env.state.model_dump()
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+def main():
     import uvicorn
     uvicorn.run(
         "server.app:app",
@@ -22,3 +44,6 @@ if __name__ == "__main__":
         port=int(os.getenv("PORT", "7860")),
         reload=False
     )
+
+if __name__ == "__main__":
+    main()

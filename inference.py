@@ -10,16 +10,18 @@ from client import HallucinationEnvClient
 from models import HallucinationAction
 
 # ── Required env vars (exact names from competition) ─────────────────
-try:
-    from dotenv import load_dotenv
-    load_dotenv()
-except ImportError:
-    pass
+from dotenv import load_dotenv
+load_dotenv()
 
-API_KEY      = os.getenv("HF_TOKEN") or os.getenv("API_KEY")
-API_BASE_URL = os.getenv("API_BASE_URL") or "https://router.huggingface.co/v1"
-MODEL_NAME   = os.getenv("MODEL_NAME") or "Qwen/Qwen2.5-72B-Instruct"
+API_KEY      = os.getenv("HF_TOKEN") 
+API_BASE_URL = os.getenv("API_BASE_URL") 
+MODEL_NAME   = os.getenv("MODEL_NAME") 
 ENV_BASE_URL = os.getenv("ENV_BASE_URL", "http://localhost:7860")
+
+print("MODEL_NAME (env):", os.getenv("MODEL_NAME"))
+print("MODEL_NAME (used):", MODEL_NAME)
+print("BASE_URL:", API_BASE_URL)
+
 
 TASKS = ["easy", "medium", "hard"]
 BENCHMARK = "hallucination-detector"
@@ -44,10 +46,10 @@ def log_step(step: int, action: str, reward: float, done: bool, error: Optional[
 # ── CHANGE 1: Remove score parameter from log_end ────────────────────
 # Sample script format: [END] success=true steps=3 rewards=0.00,0.00,1.00
 # No score field in the sample script
-def log_end(success: bool, steps: int, rewards: List[float]) -> None:
+def log_end(success: bool, steps: int, score: float, rewards: List[float]) -> None:
     rewards_str = ",".join(f"{r:.2f}" for r in rewards)
     print(
-        f"[END] success={str(success).lower()} steps={steps} rewards={rewards_str}",
+        f"[END] success={str(success).lower()} steps={steps} score={score:.2f} rewards={rewards_str}",
         flush=True,
     )
 
@@ -216,7 +218,7 @@ async def run_task(task_id: str, client: OpenAI) -> float:
         # ── CHANGE 2: Always emit [END] even on exception ─────────────
         # Matches sample script finally block pattern exactly
         # No score field — matches sample format
-        log_end(success=success, steps=steps_taken, rewards=rewards)
+        log_end(success=success, steps=steps_taken, score=score, rewards=rewards)
 
     return score
 
@@ -233,8 +235,6 @@ async def main() -> None:
     for task_id in TASKS:
         score = await run_task(task_id, client)
         results[task_id] = score
-        if request_delay > 0:
-            time.sleep(request_delay)
         if request_delay > 0:
             time.sleep(request_delay)
 

@@ -30,4 +30,4 @@ Thumbs.db
 *.tar
 
 # Jupyter (if any)
-.ipynb_checkpoints/
+.ipynb_checkpoints/.env

@@ -75,6 +75,11 @@ class HallucinationEnvironment(Environment[HallucinationAction, HallucinationObs
                 "Episode is finished. Call reset() before calling step() again."
             )
 
+        if not self._samples or self._index >= len(self._samples):
+            raise RuntimeError(
+            "No active episode. Call reset() before calling step()."
+        )
+    
         self._steps += 1
         current_sample = self._samples[self._index]
 
