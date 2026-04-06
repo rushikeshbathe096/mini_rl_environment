@@ -86,7 +86,11 @@ class HallucinationEnvironment(Environment[HallucinationAction, HallucinationObs
         sample_score, feedback_text = grade(action, current_sample)
         self._scores.append(sample_score)
 
-        reward = sample_score
+        if len(self._scores) == 1:
+            reward = sample_score
+        else:
+            previous_avg = sum(self._scores[:-1]) / (len(self._scores) - 1)
+            reward = sample_score - previous_avg
 
         episode_score = sum(self._scores) / len(self._scores)
         self._index += 1
@@ -133,7 +137,6 @@ class HallucinationEnvironment(Environment[HallucinationAction, HallucinationObs
                 }
             )
 
-    @property
     def state(self) -> HallucinationState:
         return HallucinationState(
             episode_id=self._episode_id,
