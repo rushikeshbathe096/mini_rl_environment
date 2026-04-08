@@ -1,0 +1,103 @@
+name: hallucination-detector
+version: "1.0.0"
+description: >
+  An OpenEnv RL environment where agents detect factual hallucinations
+  in LLM-generated responses by comparing them against reference documents
+  and submitting structured verification actions. Features deterministic
+  grading, confidence calibration, delta rewards, and exploit resistance.
+  First OpenEnv environment for hallucination detection.
+
+author: "team-tle"
+
+tags:
+  - openenv
+  - hallucination
+  - llm-safety
+  - llm-evaluation
+  - fact-checking
+  - responsible-ai
+  - real-world
+
+tasks:
+  - id: easy
+    description: >
+      8 samples. One obvious error per sample — wrong year, name, or city.
+      2 clean samples test false positive rate. Target score for capable model: 0.85–1.00.
+    difficulty: easy
+    max_steps: 10
+
+  - id: medium
+    description: >
+      10 samples. Two to three mixed errors per sample — digit swaps, wrong
+      attribution, added fake facts. 2 clean samples mixed in. Target: 0.65–0.85.
+    difficulty: medium
+    max_steps: 12
+
+  - id: hard
+    description: >
+      15 samples. Negation traps, entity role confusion, adversarial clean samples,
+      multi-hop reasoning errors, temporal confusion. 3 clean false-alarm traps.
+      Target: 0.40–0.75.
+    difficulty: hard
+    max_steps: 15
+
+  - id: expert
+    description: >
+      20 samples. Multi-hop reasoning, date arithmetic, numeric traps,
+      mixed true/false sentences, subtle entity swaps. 4 adversarial
+      clean samples designed to trigger false positives.
+      Target: 0.20–0.50.
+    difficulty: expert
+    max_steps: 22
+
+action_space:
+  type: object
+  properties:
+    has_hallucination:
+      type: boolean
+      description: "True if LLM response contradicts the reference document"
+    hallucinated_claim:
+      type: string
+      nullable: true
+      description: "Exact wrong phrase from the LLM response"
+    correct_fact:
+      type: string
+      nullable: true
+      description: "What the reference document actually says"
+    confidence:
+      type: number
+      minimum: 0.0
+      maximum: 1.0
+      description: "Agent confidence in its answer — calibration is rewarded"
+
+observation_space:
+  type: object
+  properties:
+    reference_document:
+      type: string
+      description: "Ground truth paragraph"
+    llm_response:
+      type: string
+      description: "Response that may contain factual errors"
+    feedback:
+      type: string
+      description: "Grader explanation with partial credit breakdown"
+    score:
+      type: number
+      description: "Running episode average score"
+    reward:
+      type: number
+      description: "Delta reward — change in running average"
+    done:
+      type: boolean
+      description: "True when episode ends"
+    sample_index:
+      type: integer
+    total_samples:
+      type: integer
+    steps_taken:
+      type: integer
+    max_steps:
+      type: integer
+
+entrypoint: "uvicorn server.app:app --host 0.0.0.0 --port 7860"
