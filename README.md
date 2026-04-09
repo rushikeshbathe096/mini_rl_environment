@@ -57,10 +57,10 @@ HalluciNet operates on a simple but rigorous verification loop:
 ## 🔁 Reward Function
 
 Reward is delta-based — the improvement from the previous running average:
-
+```
 step 1:  reward = sample_score
 step N:  reward = sample_score - average(scores[0..N-1])
-
+```
 This gives a genuine learning signal at every step rather than a 
 sparse end-of-episode reward.
 
@@ -109,6 +109,7 @@ We didn't just build an environment; we built a curriculum.
 | `easy` | 8 | One obvious error per sample (wrong year, name, city). Includes 2 clean samples. | 10 |
 | `medium` | 10 | 2-3 mixed errors (digit swaps, fake facts). Includes 2 clean samples. | 12 |
 | `hard` | 15 | Negation traps, entity flipping, adversarial clean samples, multi-hop reasoning. | 15 |
+| `expert` | 20 | Multi-hop reasoning, date arithmetic, numeric traps, mixed true/false sentences. 4 adversarial clean samples. | 22 |
 
 ### ⚠️ What Makes "Hard" Genuinely Difficult?
 The hard task contains samples specifically engineered to exploit common LLM blindspots:
@@ -144,14 +145,14 @@ This mirrors real production requirements: an overconfident, hallucinating agent
 ### 🔒 Exploit Resistance
 We rigorously tested HalluciNet against lazy RL strategies. No shortcuts allowed:
 
-| Strategy | Easy Score | Medium Score | Hard Score |
-|---|---|---|---|
-| Always-True Agent | 0.300 | 0.320 | 0.320 |
-| Always-False Agent | 0.250 | 0.200 | 0.200 |
-| Random Agent | 0.573 | 0.544 | 0.544 |
-| **Correct Calibrated Agent** | **1.000** | **0.995** | **0.849** |
+| Strategy | Easy Score | Medium Score | Hard Score | Expert Score |
+|---|---|---|---|---|
+| Always-True Agent | 0.300 | 0.320 | 0.320 | 0.320 |
+| Always-False Agent | 0.250 | 0.200 | 0.200 | 0.200 |
+| Random Agent | 0.573 | 0.544 | 0.544 | 0.544 |
+| **Correct Calibrated Agent** | **0.999** | **0.990** | **0.849** | **0.833** |
 
-*Only a genuinely capable agent can approach a score of 1.0.*
+*No exploit strategy scores above 0.58 on any task. Only a correct and calibrated agent approaches 1.0.*
 
 ## 📊 Score Separation
 
@@ -159,7 +160,7 @@ The simulated grader agent confirms meaningful difficulty progression across all
 
 | Task | Score | Gap |
 |---|---|---|
-| easy | 1.000 | baseline |
+| easy | 0.999 | baseline |
 | medium | 0.594 | −0.406 from easy |
 | hard | 0.364 | −0.230 from medium |
 | expert | 0.200 | −0.164 from hard |
@@ -210,7 +211,7 @@ HalluciNet was engineered from the ground up to be robust, reproducible,
 and resistant to exploitation at every layer of evaluation.
 
 **Infrastructure reliability:** The HF Space responds instantly to 
-`/reset` across all three tasks. Docker builds cleanly in under 
+`/reset` across all four tasks. Docker builds cleanly in under 
 60 seconds. `openenv validate` passes with zero errors. The environment 
 has never crashed during testing across dozens of inference runs.
 
@@ -232,7 +233,7 @@ with calibrated confidence. There is no shortcut.
 ```text
 mini_rl_environment/
 ├── models.py              # Pydantic typed models
-├── tasks.py               # 33 samples across 3 difficulty levels
+├── tasks.py               # 53 samples across 4 difficulty levels
 ├── grader.py              # Deterministic scoring with fuzzy matching
 ├── client.py              # WebSocket EnvClient wrapper
 ├── inference.py           # Baseline agent script
@@ -370,9 +371,9 @@ chmod +x validate-submission.sh
 If you use HalluciNet in your research or testing, please cite it:
 
 ```bibtex
-@software{hallucinet_2024,
+@software{hallucinet_2026,
   author = {Sane, Abeer Nikhil and Bathe, Rushikesh and Shringare, Shreyas Sanjaykumar},
   title = {HalluciNet: An OpenEnv Reinforcement Learning Environment for Hallucination Detection},
-  year = {2024},
+  year = {2026},
   url = {https://github.com/rushikeshbathe096/mini_rl_environment}
 }
